@@ -1,0 +1,12 @@
+
+{% extends "layout.html" %}
+
+{% block content %}
+  <div id="all-content">
+  {% for b in buildings %}
+    <li><h2>{{ b }}</h2>
+  {% else %}
+    <li><h2>No buildings yet.</h2></li> 
+  {% endfor %}    
+  </div>
+{% endblock %}
