@@ -38,12 +38,12 @@
         <h3>Category Definition</h3><br>
         <div class="radio">
           <label>
-            <input type="radio" name="optionsRadios" id="optionRaw" value="raw" checked>Use raw data
+            <input type="radio" name="optionCategory" id="optionRaw" value="raw" checked>Use raw data
           </label>
         </div>
         <div class="radio">
           <label>
-            <input type="radio" name="optionsRadios" id="optionRound" value="round">
+            <input type="radio" name="optionCategory" id="optionRound" value="round">
               <div style="float: left; margin-right: 5px;">Round data to </div>
               <div class="spinner" style="width: 90px; float: left; margin-right: 5px; margin-top:-5px;">
                 <input class="input-sm spinner" id="nround" type="text" value="" name="nround">
@@ -53,10 +53,10 @@
         </div>
         <div class="radio" style="margin-bottom: 20px; clear: both;">
           <label>
-            <input type="radio" name="optionsRadios" id="optionBin" value="bin">
+            <input type="radio" name="optionCategory" id="optionBin" value="bin">
               <div style="float: left; margin-right: 5px;">Bin data into </div> 
               <div class="spinner" style="width: 90px; float: left; margin-right: 5px; margin-top:-5px;">
-                <input class="input-sm" id="nbin" type="text" value="" name="nbin">
+                <input class="input-sm" id="nbins" type="text" value="" name="nbins">
               </div>
               <div style="float: left">bins</div>
           </label>
@@ -86,7 +86,7 @@
         max: 2
       });
 
-      $("input[name='nbin']").TouchSpin({
+      $("input[name='nbins']").TouchSpin({
         initval: 4,
         min: 1,
         max: 10
@@ -109,6 +109,7 @@
           // remove
           vfields.splice(ind, 1);
           $(this).removeClass('warning');
+          category = '';
         }
       });
 
@@ -127,9 +128,39 @@
           success: function(res){
             $('.loading').hide();
             var d = $.parseJSON(res);
+            d = processCategory(d);
             scatterMx(d, category);
           }        
         });
+      }
+  
+      function processCategory(d){
+        var method = $('input[name="optionCategory"]:checked').val();
+        if (method == "round"){
+          var dec = parseFloat($('#nround').val())
+          return _.map(d, function(r){
+            r[category] = Math.round(r[category] * Math.pow(10, dec)) / Math.pow(10, dec);
+            return r;
+          }); 
+        } else if (method == "bin"){
+          var nbins = parseFloat($('#nbins').val())
+          var ext = d3.extent(d, function(r){
+            return r[category];
+          });
+          var range = ext[1] - ext[0];
+          var assignBin = function(v){
+            for (var i = 0; i < nbins; i++){
+              var val = v[category];
+              if (val <= i*(range/nbins)) return i;
+            }
+          }
+          return _.map(d, function(r){
+            r[category] = assignBin(r)
+            return r 
+          });
+        } else {
+          return d;
+        }
       }
 
       var scatterMx = function(data, category) {
