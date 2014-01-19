@@ -9,6 +9,9 @@
       padding-right: 10px;
       overflow: auto;
     }
+    .radio {
+      margin-bottom: 30px;
+    }
     </style>
   </style>
 {% endblock %}
@@ -31,8 +34,36 @@
         </table>
       </div>
 
-      <div class="col-md-6 windowed">
-        <button class="btn btn-primary" id="btn-next" type="button">Next</button>
+      <div class="col-md-6" style="padding: 90px;">
+        <h3>Category Definition</h3><br>
+        <div class="radio">
+          <label>
+            <input type="radio" name="optionsRadios" id="optionRaw" value="raw" checked>Use raw data
+          </label>
+        </div>
+        <div class="radio">
+          <label>
+            <input type="radio" name="optionsRadios" id="optionRound" value="round">
+              <div style="float: left; margin-right: 5px;">Round data to </div>
+              <div class="spinner" style="width: 90px; float: left; margin-right: 5px; margin-top:-5px;">
+                <input class="input-sm spinner" id="nround" type="text" value="" name="nround">
+              </div>
+              <div style="float: left">digits</div>
+          </label>
+        </div>
+        <div class="radio" style="margin-bottom: 20px; clear: both;">
+          <label>
+            <input type="radio" name="optionsRadios" id="optionBin" value="bin">
+              <div style="float: left; margin-right: 5px;">Bin data into </div> 
+              <div class="spinner" style="width: 90px; float: left; margin-right: 5px; margin-top:-5px;">
+                <input class="input-sm" id="nbin" type="text" value="" name="nbin">
+              </div>
+              <div style="float: left">bins</div>
+          </label>
+        </div>
+        <div style="padding-top:10px; margin-left: 80px;">
+          <button class="btn btn-primary btn-lg" id="btn-plot" type="button">Plot</button>
+        </div>
       </div>
     </div>
 
@@ -48,6 +79,18 @@
       window.category = '';
 
       $(".windowed").height($(window).height() - $('.navbar').height() - 10);
+
+      $("input[name='nround']").TouchSpin({
+        initval: 1,
+        min: -2,
+        max: 2
+      });
+
+      $("input[name='nbin']").TouchSpin({
+        initval: 4,
+        min: 1,
+        max: 10
+      });
 
       $(".field-row").click(function(){
         var id = $(this).attr("id");
@@ -69,7 +112,7 @@
         }
       });
 
-      $('#btn-next').click(function(){
+      $('#btn-plot').click(function(){
         $("#main").hide();
         $(".loading").show();
         renderScatterMx(vfields);
