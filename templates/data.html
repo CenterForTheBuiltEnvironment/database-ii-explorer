@@ -2,22 +2,192 @@
 
 {% block head %}
 {{ super() }}
-
-  <script>
-    
-
-
-  </script>
-
+  <style>
+    .windowed {
+      margin-top:10px;
+      padding-left: 10px;
+      padding-right: 10px;
+      overflow: auto;
+    }
+    </style>
+  </style>
 {% endblock %}
 
 {% block content %}
   <div class="container">
+    <div class="row" id="main">
+      <div class="col-md-6 windowed">
+        <table id ="fields-table" class="table table-hover table-bordered table-condensed">
+          <thead><tr style="text-align:center"><th>Name</th><th>Unit</th><th>Description</th></thead>
+          <tbody>
+            {% for f in fields %}
+            <tr class="field-row" id="{{ f.id }}">
+              <td>{{ f.id }}</td>
+              <td>{{ f.unit }}</td>
+              <td>{{ f.description }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
 
-    <div class="starter-template">
-      <h1>Bootstrap starter template</h1>
-      <p class="lead">Use this document as a way to quickly start any new project.<br> All you get is this text and a mostly barebones HTML document.</p>
+      <div class="col-md-6 windowed">
+        <button class="btn btn-primary" id="btn-next" type="button">Next</button>
+      </div>
     </div>
 
-  </div><!-- /.container -->
+    <div class='loading'></div>
+
+  </div>
+
+  <script>
+
+    $(document).ready(function(){
+
+      window.vfields = [];    
+      window.category = '';
+
+      $(".windowed").height($(window).height() - $('.navbar').height() - 10);
+
+      $(".field-row").click(function(){
+        var id = $(this).attr("id");
+        var ind = vfields.indexOf(id);
+        if (ind == -1){
+          vfields.push(id);
+          $(this).addClass('success');
+        } else if ($(this).hasClass('success')){
+          // category
+          $(this).removeClass('success');
+          $('.warning').addClass('success');
+          $('.warning').removeClass('warning');
+          $(this).addClass('warning');
+          category = id;
+        } else {
+          // remove
+          vfields.splice(ind, 1);
+          $(this).removeClass('warning');
+        }
+      });
+
+      $('#btn-next').click(function(){
+        $("#main").hide();
+        $(".loading").show();
+        renderScatterMx(vfields);
+      });
+
+      function renderScatterMx(fields){
+        var queryStr = fields.join(",");     
+        var url = '/api/query?fields=' + queryStr;
+        $.ajax({
+          url: url,
+          type: "get",
+          success: function(res){
+            $('.loading').hide();
+            var d = $.parseJSON(res);
+            scatterMx(d, category);
+          }        
+        });
+      }
+
+      var scatterMx = function(data, category) {
+        var domainByTrait = {},
+            traits = d3.keys(data[0]).filter(function(d) { return d !== category; }),
+            n = traits.length;
+
+        traits.forEach(function(trait) {
+          domainByTrait[trait] = d3.extent(data, function(d) { return d[trait]; });
+        });
+
+        var color = d3.scale.category10();
+
+        var width = $('.container').width(),
+            size = width / n,
+            padding = 19.5;
+
+        var x = d3.scale.linear()
+            .range([padding / 2, size - padding / 2]);
+
+        var y = d3.scale.linear()
+            .range([size - padding / 2, padding / 2]);
+
+        var xAxis = d3.svg.axis()
+            .scale(x)
+            .orient("bottom")
+            .ticks(5);
+
+        var yAxis = d3.svg.axis()
+            .scale(y)
+            .orient("left")
+            .ticks(5);
+
+        xAxis.tickSize(size * n);
+        yAxis.tickSize(-size * n);
+
+        var svg = d3.select("body").append("svg")
+            .attr("width", size * n + padding)
+            .attr("height", size * n + padding)
+            .style({'display': 'block', 'margin': 'auto'})
+          .append("g")
+            .attr("transform", "translate(" + padding + "," + padding / 2 + ")");
+
+        svg.selectAll(".x.axis")
+            .data(traits)
+          .enter().append("g")
+            .attr("class", "x axis")
+            .attr("transform", function(d, i) { return "translate(" + (n - i - 1) * size + ",0)"; })
+            .each(function(d) { x.domain(domainByTrait[d]); d3.select(this).call(xAxis); });
+
+        svg.selectAll(".y.axis")
+            .data(traits)
+          .enter().append("g")
+            .attr("class", "y axis")
+            .attr("transform", function(d, i) { return "translate(0," + i * size + ")"; })
+            .each(function(d) { y.domain(domainByTrait[d]); d3.select(this).call(yAxis); });
+
+        var cell = svg.selectAll(".cell")
+            .data(cross(traits, traits))
+          .enter().append("g")
+            .attr("class", "cell")
+            .attr("transform", function(d) { return "translate(" + (n - d.i - 1) * size + "," + d.j * size + ")"; })
+            .each(plot);
+
+        cell.filter(function(d) { return d.i === d.j; }).append("text")
+            .attr("x", padding)
+            .attr("y", padding)
+            .attr("dy", ".71em")
+            .text(function(d) { return d.x; });
+
+        function plot(p) {
+          var cell = d3.select(this);
+
+          x.domain(domainByTrait[p.x]);
+          y.domain(domainByTrait[p.y]);
+
+          cell.append("rect")
+              .attr("class", "frame")
+              .attr("x", padding / 2)
+              .attr("y", padding / 2)
+              .attr("width", size - padding)
+              .attr("height", size - padding);
+
+          cell.selectAll("circle")
+              .data(data)
+            .enter().append("circle")
+              .attr("cx", function(d) { return x(d[p.x]); })
+              .attr("cy", function(d) { return y(d[p.y]); })
+              .attr("r", 3)
+              .style("fill", function(d) { return color(d[category]); });
+        }
+
+        function cross(a, b) {
+          var c = [], n = a.length, m = b.length, i, j;
+          for (i = -1; ++i < n;) for (j = -1; ++j < m;) c.push({x: a[i], i: i, y: b[j], j: j});
+          return c;
+        }
+      };
+
+    });
+
+  </script>
+
 {% endblock %}

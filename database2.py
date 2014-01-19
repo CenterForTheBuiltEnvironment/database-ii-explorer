@@ -61,8 +61,8 @@ def query():
         where_str = 'and '.join(where)
  
         # not secure
-        query = 'select ' + ', '.join(select) + ' from ' + \
-                ', '.join(tables) + ' where ' + 'and '.join(where) + ';'
+        query = 'select ' + select_str + ' from ' + \
+                tables_str + ' where ' + where_str + ';'
 
         c = get_db().cursor()
         c.execute(query)
