@@ -79,6 +79,11 @@ def query():
         return json.dumps(rv)
 
 
+@app.route('/heatmap', methods = ['GET'])
+def heatmap():
+    f = query_db('select * from field')
+    return render_template('heatmap.html', fields=f)
+
 @app.route('/data', methods = ['GET'])
 def data():
     f = query_db('select * from field')
