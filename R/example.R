@@ -1,5 +1,8 @@
 # To connect to the database we use the RSQLite package.
-# This can be installed by running install.packages('RSQLite')
+# To install it, uncomment the line below
+#install.packages('RSQLite')
+
+# Load the RSQLite package
 require('RSQLite')
 
 # Create an instance of the SQLite driver
@@ -24,7 +27,7 @@ query <- paste("select value, participant.sex
 res <- dbGetQuery(con, query)
 boxplot(res$value~res$sex)
 
-# or just look at the summary statistics
+# or look at the summary statistics
 summary(res)
 
 # statistics by category

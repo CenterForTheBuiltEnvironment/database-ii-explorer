@@ -1,7 +1,9 @@
 import sqlite3
 import json
 import csv
-from flask import g, Flask, render_template, jsonify, request
+import StringIO
+from flask import g, Flask, render_template, jsonify, request, make_response
+
 
 DATABASE = 'db/ashrae.db'
 app = Flask(__name__)
@@ -10,8 +12,7 @@ app = Flask(__name__)
 def query_db(query, args=(), one=False):
     """
     this is an easy way to get dicts back from the db,
-    though sometimes you have to do it manually like
-    in data()
+    though sometimes you have to do it manually
     """
     db = get_db()
     db.row_factory = make_dicts
@@ -39,14 +40,42 @@ def close_connection(exception):
 @app.route('/buildings', methods = ['GET'])
 def buildings():
     b = query_db('select * from building')
-    return render_template('buildings.html', buildings=d)
+    return render_template('buildings.html', buildings=b)
+
+@app.route('/api/export', methods = ['GET'])
+def _export():
+    fields = request.args.get('fields')
+    fmt = request.args.get('format', 'json')
+    rv = _query(fields)
+    fname = 'download'
+    if fmt == 'csv':
+        rv = json.loads(rv)
+        rv = dict2csv(rv)
+    response = make_response(rv)
+    response.headers["Content-Disposition"] = "attachment; filename=%s.%s" % (fname, fmt)
+    if fmt == 'json':
+        response.headers["Content-Type"] = "application/json"
+    else:
+        response.headers["Content-Type"] = "text/csv"
+    return response
+
+def dict2csv(data):
+    s = StringIO.StringIO()
+    w = csv.DictWriter(s, data[0].keys())
+    w.writeheader()
+    w.writerows(data)
+    csv_str = s.getvalue()
+    return csv_str
 
 @app.route('/api/query', methods = ['GET'])
 def query():
     """
-    Query API for the raw data
+    Query API for the raw data only
     """
     fields = request.args.get('fields')
+    return _query(fields)
+
+def _query(fields):
     if fields is None:
         return "{}"
     else:
@@ -72,27 +101,29 @@ def query():
             if d is not None:
                 r = {}
                 for i in field_range:
-                    r[fields[i]] = d[i]
+                    try:
+                        r[fields[i]] = d[i]
+                    except KeyError:
+                        pass
             else:
                 break
             rv.append(r)
         return json.dumps(rv)
-
 
 @app.route('/heatmap', methods = ['GET'])
 def heatmap():
     f = query_db('select * from field')
     return render_template('heatmap.html', fields=f)
 
-@app.route('/data', methods = ['GET'])
-def data():
+@app.route('/scatter', methods = ['GET'])
+def scatter():
     f = query_db('select * from field')
-    return render_template('data.html', fields=f)
+    return render_template('scatter.html', fields=f)
 
-@app.route('/api/fields', methods = ['GET'])
-def get_fields():
-    rv = query_db('select * from field')
-    return json.dumps(rv)
+@app.route('/export', methods = ['GET'])
+def export():
+    f = query_db('select * from field')
+    return render_template('export.html', fields=f)
 
 @app.route('/')
 def index():

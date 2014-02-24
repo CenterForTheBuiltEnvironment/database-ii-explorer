@@ -74,6 +74,9 @@
   <script>
 
     $(document).ready(function(){
+      
+      $('li.active').removeClass('active');
+      $('li#scatter').addClass('active');     
 
       window.vfields = [];    
       window.category = '';

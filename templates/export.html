@@ -1,0 +1,102 @@
+{% extends "layout.html" %}
+
+{% block head %}
+{{ super() }}
+  <style>
+    .windowed {
+      margin-top:10px;
+      padding-left: 10px;
+      padding-right: 10px;
+      overflow: auto;
+    }
+    .radio {
+      margin-bottom: 30px;
+    }
+    </style>
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="container">
+    <div class="row" id="main">
+      <div class="col-md-6 windowed">
+        <table id ="fields-table" class="table table-hover table-bordered table-condensed">
+          <thead><tr style="text-align:center"><th>Name</th><th>Unit</th><th>Description</th></thead>
+          <tbody>
+            {% for f in fields %}
+            <tr class="field-row" id="{{ f.id }}">
+              <td>{{ f.id }}</td>
+              <td>{{ f.unit }}</td>
+              <td>{{ f.description }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="col-md-6" style="padding: 90px;">
+        <div style="padding-top:10px; margin-left: 80px;">
+          <label class="checkbox">
+            <input id="csv" type="checkbox"> CSV format
+          </label>
+          <button class="btn btn-primary btn-lg" id="btn-export" type="button">Export</button>
+        </div>
+      </div>
+    </div>
+
+    <div class='loading'></div>
+
+  </div>
+
+  <script>
+
+    $(document).ready(function(){
+      
+      $('li.active').removeClass('active');
+      $('li#export').addClass('active'); 
+
+      window.vfields = [];    
+
+      $(".windowed").height($(window).height() - $('.navbar').height() - 10);
+
+      $(".field-row").click(function(){
+        var id = $(this).attr("id");
+        var ind = vfields.indexOf(id);
+        if (ind == -1){
+          vfields.push(id);
+          $(this).addClass('success');
+        } else {
+          // remove
+          vfields.splice(ind, 1);
+          $(this).removeClass('success');
+          category = '';
+        }
+      });
+
+      $('#btn-export').click(function(){
+        var fmt = "json"
+        if ($("#csv:checked").length == 1) {
+          fmt = "csv" 
+        }
+        var myhref = '/api/export?fields=' + vfields.join(',') + "&format=" + fmt;
+        window.location.href = myhref;
+        $('#main').html('Download started')
+      });
+
+      function renderDownload(fields){
+        queryStr = fields.join(",");
+        var url = '/api/export?fields=' + queryStr;
+        $.ajax({
+          url: url,
+          type: "get",
+          success: function(res){
+            $('.loading').hide();
+          }        
+        });
+      }
+
+    });
+
+  </script>
+
+{% endblock %}
